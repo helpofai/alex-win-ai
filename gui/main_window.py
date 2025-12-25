@@ -12,6 +12,7 @@ from gui.widgets import ReactorWidget, AudioBar, SystemStatsWidget
 from gui.transparency import ActionPreviewPopup, LiveExecutionPopup, ResultPopup, CriticalConfirmationPopup, Action
 from core.voice import VoiceEngine
 from core.brain import Brain
+from core.version import CURRENT_VERSION, check_for_updates
 
 class WorkerSignals(QObject):
     update_log = Signal(str, str)
@@ -21,6 +22,7 @@ class WorkerSignals(QObject):
     show_live = Signal(int, int, str, int) # step, total, desc, progress
     show_result = Signal(str)
     show_critical = Signal(str)
+    update_available = Signal(str)
 
 class ListenThread(threading.Thread):
     def __init__(self, voice, brain, signals):
@@ -54,7 +56,7 @@ class ListenThread(threading.Thread):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("ALEX | CORE COMMAND")
+        self.setWindowTitle(f"ALEX v{CURRENT_VERSION} | CORE COMMAND")
         self.resize(1100, 750)
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setWindowFlags(Qt.FramelessWindowHint)
@@ -64,8 +66,10 @@ class MainWindow(QMainWindow):
         self.voice = VoiceEngine()
         self.signals = WorkerSignals()
         self.brain = Brain(self.voice, ui_signals=self.signals, task_callback=self.show_live_single)
+        
         self.signals.update_log.connect(self.append_chat)
         self.signals.status_changed.connect(self.update_state)
+        self.signals.update_available.connect(self._notify_update)
 
         # 2. Popups
         self.popup_preview = ActionPreviewPopup()
@@ -82,30 +86,27 @@ class MainWindow(QMainWindow):
         self.popup_preview.authorized.connect(self._handle_auth)
         self.popup_critical.confirmed.connect(self._handle_auth)
 
-        # UI Setup (The Cockpit)
+        # UI Setup
         self.main_container = QWidget(); self.main_container.setObjectName("CentralWidget")
         self.setCentralWidget(self.main_container)
         self.main_layout = QVBoxLayout(self.main_container)
 
         # --- Dashboard ---
         header = QHBoxLayout()
-        self.logo_label = QLabel("ALEX v4.0 // AGENTIC CORE"); self.logo_label.setObjectName("StatusLabel")
+        self.logo_label = QLabel(f"ALEX v{CURRENT_VERSION} // AGENTIC CORE"); self.logo_label.setObjectName("StatusLabel")
         header.addWidget(self.logo_label); header.addStretch(); 
+        self.time_label = QLabel("00:00:00"); self.time_label.setStyleSheet("color: #00d4ff; font-family: Consolas;"); header.addWidget(self.time_label)
         close_btn = QPushButton("✕"); close_btn.setFixedSize(30, 30); close_btn.clicked.connect(self.close); header.addWidget(close_btn)
         self.main_layout.addLayout(header)
 
         dashboard = QHBoxLayout()
-        # Left Vitals
         side = QVBoxLayout(); side.addWidget(QLabel("SYSTEM VITALS")); side.addWidget(SystemStatsWidget()); side.addStretch()
         dashboard.addLayout(side)
-        # Center Core
         center = QVBoxLayout(); self.reactor = ReactorWidget(); self.audio_bar = AudioBar(); center.addWidget(self.reactor, 0, Qt.AlignCenter); center.addWidget(self.audio_bar, 0, Qt.AlignCenter)
         dashboard.addLayout(center, stretch=2)
-        # Right Chat
         self.chat_area = QTextEdit(); self.chat_area.setReadOnly(True); dashboard.addWidget(self.chat_area, stretch=1)
         self.main_layout.addLayout(dashboard)
 
-        # Footer
         footer = QHBoxLayout(); self.input_field = QLineEdit(); self.input_field.setPlaceholderText("ENTER COMMAND..."); self.input_field.returnPressed.connect(self.handle_text_input)
         footer.addWidget(self.input_field); self.main_layout.addLayout(footer)
 
@@ -113,6 +114,21 @@ class MainWindow(QMainWindow):
         self.listen_thread = ListenThread(self.voice, self.brain, self.signals); self.listen_thread.daemon = True; self.listen_thread.start()
         
         self.audio_timer = QTimer(self); self.audio_timer.timeout.connect(self.update_audio); self.audio_timer.start(30)
+        self.clock_timer = QTimer(self); self.clock_timer.timeout.connect(self._update_time); self.clock_timer.start(1000)
+
+        # Check for updates
+        threading.Thread(target=self._update_check_thread, daemon=True).start()
+
+    def _update_check_thread(self):
+        new_v = check_for_updates()
+        if new_v: self.signals.update_available.emit(new_v)
+
+    def _notify_update(self, version):
+        self.append_chat("SYSTEM", f"🚀 A new version (v{version}) is available on GitHub!")
+        self.popup_result.show_success(f"Update Available: v{version}")
+
+    def _update_time(self):
+        self.time_label.setText(datetime.datetime.now().strftime("%H:%M:%S"))
 
     def _handle_auth(self, val):
         self.popup_preview.hide(); self.popup_critical.hide()
@@ -133,11 +149,12 @@ class MainWindow(QMainWindow):
 
     def append_chat(self, sender, message):
         color = "#00d4ff" if sender == "Alex" else "#fff"
-        self.chat_area.append(f"<b style='color:{color}'>{sender}:</b> {message}")
+        align = "left" if sender == "Alex" else "right"
+        self.chat_area.append(f"<div style='text-align:{align}'><b style='color:{color}'>{sender}:</b> {message}</div>")
 
     def update_state(self, status):
         self.reactor.set_state(status)
-        self.logo_label.setText(f"ALEX // {status}")
+        self.logo_label.setText(f"ALEX v{CURRENT_VERSION} // {status}")
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton: self.drag_pos = event.globalPosition().toPoint()
