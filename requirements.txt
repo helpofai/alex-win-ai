@@ -1,0 +1,8 @@
+PySide6
+pyttsx3
+SpeechRecognition
+pyaudio
+pyautogui
+psutil
+requests
+black
