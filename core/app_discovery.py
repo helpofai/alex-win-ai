@@ -2,6 +2,7 @@ import os
 import json
 import subprocess
 import threading
+import difflib
 
 class AppDiscovery:
     def __init__(self, registry_path="data/app_registry.json"):
@@ -51,7 +52,6 @@ class AppDiscovery:
     def _scan_uwp_apps(self):
         """Uses PowerShell to get Microsoft Store / UWP apps."""
         try:
-            # Command to get PackageFamilyName and DisplayName
             cmd = 'PowerShell "Get-AppxPackage | Select Name, PackageFamilyName"'
             res = subprocess.check_output(cmd, shell=True).decode('utf-8', errors='ignore')
             
@@ -62,13 +62,11 @@ class AppDiscovery:
                     if len(parts) >= 2:
                         name = parts[0].lower()
                         family_name = parts[1]
-                        # We don't have the exact AppUserModelID here without deeper lookup,
-                        # but we can often launch via family name or explorer shell:AppsFolder
                         self.apps[name] = {
                             "name": parts[0],
                             "type": "uwp",
                             "identity": family_name,
-                            "path": rf"shell:AppsFolder\{family_name}!App", # Approximate
+                            "path": rf"shell:AppsFolder\{family_name}!App",
                             "category": self._guess_category(name)
                         }
         except Exception as e:
@@ -82,20 +80,27 @@ class AppDiscovery:
         return "general"
 
     def find_app(self, query):
-        """Intelligent lookup: by name, category, or type."""
+        """Intelligent lookup prioritizing name similarity."""
         query = query.lower().strip()
         
-        # 1. Direct Name Match
+        # 1. Exact Match
         if query in self.apps: return self.apps[query]
         
-        # 2. Category Match (e.g. "open music player")
+        # 2. Fuzzy Name Match (High cutoff)
+        matches = difflib.get_close_matches(query, self.apps.keys(), n=1, cutoff=0.6)
+        if matches: return self.apps[matches[0]]
+        
+        # 3. Category Search (Only if query contains category keywords)
         if "player" in query or "music" in query:
             for app in self.apps.values():
                 if app["category"] == "music": return app
-                
-        # 3. Fuzzy search
-        import difflib
-        matches = difflib.get_close_matches(query, self.apps.keys(), n=1, cutoff=0.5)
+        
+        if "browser" in query or "web" in query:
+            for app in self.apps.values():
+                if app["category"] == "browser": return app
+
+        # 4. Fallback Fuzzy (Lower cutoff)
+        matches = difflib.get_close_matches(query, self.apps.keys(), n=1, cutoff=0.3)
         if matches: return self.apps[matches[0]]
         
         return None
@@ -106,7 +111,7 @@ class AppDiscovery:
         for app in self.apps.values():
             cat = app.get("category", "general")
             if cat not in summary: summary[cat] = []
-            if len(summary[cat]) < 10: # Cap at 10 per category to save tokens
+            if len(summary[cat]) < 10:
                 summary[cat].append(app["name"])
         
         lines = []

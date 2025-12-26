@@ -2,86 +2,48 @@
 ### *Autonomous. Private. Enterprise-Grade.*
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Python: 3.10+](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/)
+[![Python: 3.14+](https://img.shields.io/badge/Python-3.14+-blue.svg)](https://www.python.org/)
 [![Security: Zero--Trust](https://img.shields.io/badge/Security-Zero--Trust-red.svg)](#security-model)
 [![Architecture: SoC--Brain](https://img.shields.io/badge/Architecture-SoC--Brain-cyan.svg)](#the-society-of-brains)
 
-Alex AI is a sophisticated, JARVIS-style autonomous desktop agent designed for secure, high-performance PC orchestration. Unlike standard chatbots, Alex utilizes a **Society of Brains (SoC)** architecture to plan, execute, and reflect on complex multi-step tasks across your entire Windows ecosystem—all while maintaining a strictly local and private data footprint.
+Alex AI is a sophisticated, JARVIS-style autonomous desktop agent designed for secure, high-performance PC orchestration. Utilizing a **Society of Brains (SoC)** architecture, Alex plans, executes, and reflects on complex tasks while maintaining a 100% private local footprint.
 
 ---
 
 ## 🏛️ System Architecture: The Society of Brains
 Alex operates through a coordinated layer of specialist agents managed by a central orchestrator:
 
-1.  **CEO Brain (Orchestrator)**: The primary reasoning engine. It converts human intent into strategic multi-step plans using a `Plan-Execute-Reflect` loop.
-2.  **Visual Cortex**: Real-time screen awareness via local OCR (`EasyOCR`) and UI grounding. Alex "sees" what you see to interact with any application.
-3.  **Security Gate (Zero-Trust)**: A military-grade filter that risk-scores every action (0-100).
-4.  **Specialist Executors**: Dedicated modules for Browser Automation, App Discovery (UWP + EXE), System Operations, and File Management.
-5.  **Memory Layer**: Comprising **Episodic Memory** (past experiences) and **Semantic Memory** (learned facts and user habits).
+1.  **CEO Brain (Orchestrator)**: The primary reasoning engine with a `Plan-Execute-Reflect` loop.
+2.  **Visual Cortex**: Local OCR (`EasyOCR`) and UI grounding.
+3.  **Security Gate (Zero-Trust)**: Risk-scored actions (0-100) with biometric MFA.
+4.  **Specialist Executors**: Multi-tab dashboard for Browser, Files, Debugger, and Network tasks.
+5.  **Memory Layer**: Episodic and Semantic memory for persistent learning.
 
 ---
 
 ## 🔥 Key Capabilities
 
-### 🧠 Autonomous Execution
-*   **Intent Decomposition**: Give complex commands like *"Find the latest tech news, save it to a file, and then open my code editor."* Alex plans and chains these actions automatically.
-*   **Self-Correction**: If a task fails, Alex analyzes the error logs, re-plans, and retries with a new strategy.
-*   **Self-Evolution**: Alex can write, install, and execute its own Python "skills" to expand its capabilities on the fly.
+### 🧠 Autonomous Execution & Self-Evolution
+*   **Intent Engine**: Automated multi-step planning and self-correction loop.
+*   **Skill Creation**: Alex autonomously writes, installs, and executes Python "skills" (`skills/`) to solve new problems.
+*   **PowerShell Protocol**: High-reliability app launching for both classic EXE and UWP Store apps.
 
-### 👁️ Contextual Awareness
-*   **Semantic Clicking**: Alex can find and click buttons based on their text description using local computer vision.
-*   **Live OCR**: Real-time extraction of screen text for debugging, research, and summarization.
-*   **Focus-Awareness**: Alex monitors your active applications. If you are in an IDE or a game, he enters "Tactical Mode," reducing interruptions and speaking only for critical alerts.
+### 👁️ Contextual Awareness & Master Dashboard
+*   **Command Sphere UI**: A borderless holographic "Cockpit" with real-time system vitals and a floating mini-mode.
+*   **Multi-Tab Data Center**: Automatic specialized tabs (Files, Browser, Debugger, Learning) that open and auto-close based on AI activity.
+*   **Global Hotkey**: Trigger Alex instantly from anywhere using `Ctrl + Shift + A`.
 
----
-
-## 🛡️ Security Model: Military-Grade
-Alex is built on a **Zero-Trust** foundation to ensure the AI remains an asset, never a liability.
-
-*   **Risk Classification**: Actions are categorized into Low, Medium, High, and Critical.
-*   **Dual-Biometric Verification**:
-    *   **Face ID**: High-security tasks require visual identification via OpenCV.
-    *   **Voice Fingerprinting**: Uses spectral analysis to verify the user's unique vocal profile.
-*   **Transparency HUD**: Every autonomous move is displayed in a semi-transparent "Glass UI" popup for real-time auditability.
-*   **Critical Confirmation**: Actions like file deletion or system shutdown require an explicit, typed `CONFIRM` code from the authorized user.
+### 🎙️ Total Offline Independence
+*   **Local STT (Vosk)**: 100% offline speech recognition—no data leaves your PC.
+*   **Neural TTS (Edge)**: High-quality neural voice with local `pyttsx3` fallback.
+*   **Emotional Reactions**: Syncs speech with physical sound effects like `(laughs)` or `(sighs)`.
 
 ---
 
-## 🛠️ Advanced Developer Guide
-
-### 🧱 Modular Specialist Architecture
-Alex is designed for infinite expansion. The core logic is decoupled into "Specialist Brains." To add a new capability, you don't modify the core; you add a new Specialist.
-
-#### **Adding a New "Skill" (Hot-Loading)**
-Alex can autonomously create skills, but you can also manually add them to the `skills/` directory. A skill is a standalone Python script that the **CEO Brain** can call.
-1.  Place your script in `skills/my_tool.py`.
-2.  The script can use standard library or project utilities.
-3.  Execute via voice: *"Alex, run skill my_tool."*
-
-#### **Extending the Intent Engine**
-To add a new native command to the **Specialist Execution Layer**:
-1.  Open `core/brain.py`.
-2.  Add a handler in `_execute_single_command(self, action)`.
-3.  Example:
-    ```python
-    if action.startswith("fire_lasers"):
-        return self.hardware_controller.trigger_relay()
-    ```
-
-### 🧬 Biometric Enrollment API
-Developers must enroll their identity before Alex grants access to `High` or `Critical` risk tiers.
-- **Voice Enrollment**: Trigger `self.biometrics.enroll(audio_data)`. Internally, this generates a 10-point spectral envelope.
-- **Face Enrollment**: Trigger `self.face_id.enroll()`. This captures 30 samples and trains a local LBPH model.
-
-### 🪟 Transparency HUD Integration
-Every specialist action should be reported to the HUD for auditability. Use the `task_callback`:
-```python
-if self.task_callback:
-    self.task_callback("Optimizing Database...")
-```
-
-### 🧪 Debugging & Simulation
-Toggle **Simulation Mode** in the config to preview all actions in the HUD without real-world execution. Use the **Developer Co-Pilot** to visually debug runtime errors in the Alex console itself.
+## 🛡️ Security Model
+*   **Dual-Biometric Verification**: Face ID (OpenCV) + Voice Fingerprinting (Spectral Analysis).
+*   **Transparency HUD**: Real-time "Glass UI" popups for Action Preview, Live Progress, and Critical Alerts.
+*   **Critical Confirmation**: High-impact commands require a typed `CONFIRM` code.
 
 ---
 
@@ -89,28 +51,24 @@ Toggle **Simulation Mode** in the config to preview all actions in the HUD witho
 
 ### Prerequisites
 - Windows 10/11
-- Python 3.10 or higher
-- [LM Studio](https://lmstudio.ai/) (Running a local model server on port 1234)
-- *Recommended: An NVIDIA GPU with 8GB+ VRAM for optimal Vision/OCR performance.*
+- Python 3.10+ (Fully tested on v3.14)
+- [LM Studio](https://lmstudio.ai/) (Local server on port 1234)
 
 ### Quick Start
-1.  **Clone the Repository**:
+1.  **Clone & Install**:
     ```bash
     git clone https://github.com/helpofai/alex-win-ai.git
     cd alex-win-ai
-    ```
-2.  **Install Dependencies**:
-    ```bash
     pip install -r requirements.txt
     ```
-3.  **Connect the Brain**:
-    Open LM Studio, load a model (e.g., Llama 3 or LLaVA for vision), and start the Local Server.
-4.  **Initialize Alex**:
-    Double-click `run.bat` or execute `python main.py`.
+2.  **Run**:
+    Double-click `run.bat`.
+3.  **Enroll**:
+    Say: *"Alex, enroll my face"* and *"Alex, enroll my voice."*
 
 ---
 
-## 📜 Disclaimer & Safety
-This system has direct access to your PC's inputs and file system. Always run Alex in a trusted environment. The built-in Zero-Trust model is designed to mitigate risk, but the user remains responsible for the AI's execution path.
+## 📜 Disclaimer
+Alex AI has deep OS access. Use in a trusted environment.
 
-**Developed by helpofai** | *Building the future of Autonomous Human-PC Interaction.*
+**Developed by helpofai** | *Autonomous Human-PC Interaction.*

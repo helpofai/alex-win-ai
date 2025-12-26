@@ -76,8 +76,17 @@ class VoiceEngine:
                     chunk_size = len(outdata)
                     if len(data) > current_frame[0]:
                         chunk = data[current_frame[0]:current_frame[0]+chunk_size]
-                        if len(chunk.shape) == 1: chunk = np.repeat(chunk[:, np.newaxis], outdata.shape[1], axis=1)
-                        outdata[:] = chunk
+                        # Handle Mono to Stereo or shape issues
+                        if len(chunk.shape) == 1: 
+                            chunk = np.repeat(chunk[:, np.newaxis], outdata.shape[1], axis=1)
+                        
+                        # Handle the last chunk which might be smaller than outdata
+                        if len(chunk) < chunk_size:
+                            outdata[:len(chunk)] = chunk
+                            outdata[len(chunk):] = 0
+                            event.set()
+                        else:
+                            outdata[:] = chunk
                         current_frame[0] += chunk_size
                     else:
                         outdata.fill(0); event.set()

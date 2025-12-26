@@ -4,13 +4,14 @@ import datetime
 import keyboard
 from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                                QTextEdit, QLineEdit, QPushButton, QLabel, 
-                               QFrame, QProgressBar)
-from PySide6.QtCore import Qt, Signal, QObject, QTimer
-from PySide6.QtGui import QColor, QFont
+                               QFrame, QProgressBar, QGraphicsDropShadowEffect, QSystemTrayIcon, QMenu)
+from PySide6.QtCore import Qt, Signal, QObject, QTimer, QPropertyAnimation, QEasingCurve, QSize
+from PySide6.QtGui import QColor, QFont, QIcon, QAction
 
 from gui.styles import DARK_THEME
 from gui.widgets import ReactorWidget, AudioBar, SystemStatsWidget
 from gui.transparency import ActionPreviewPopup, LiveExecutionPopup, ResultPopup, CriticalConfirmationPopup, Action
+from gui.dashboard import MasterDashboard
 from core.voice import VoiceEngine
 from core.brain import Brain
 from core.version import CURRENT_VERSION, check_for_updates
@@ -22,7 +23,7 @@ class WorkerSignals(QObject):
     show_live = Signal(int, int, str, int)
     show_result = Signal(str)
     show_critical = Signal(str)
-    update_available = Signal(str)
+    log_tab = Signal(str, str)
 
 class ListenThread(threading.Thread):
     def __init__(self, voice, brain, signals):
@@ -45,91 +46,125 @@ class ListenThread(threading.Thread):
                 self.signals.status_changed.emit("TEXT_MODE")
                 threading.Event().wait(1)
 
+class MiniSphere(QWidget):
+    """Tiny always-on-top version of Alex."""
+    def __init__(self, parent=None):
+        super().__init__()
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.resize(100, 100)
+        
+        self.layout = QVBoxLayout(self)
+        self.reactor = ReactorWidget(); self.reactor.setFixedSize(80, 80)
+        self.layout.addWidget(self.reactor)
+        
+        self.mouse_pos = None
+
+    def set_state(self, state):
+        self.reactor.set_state(state)
+
+    def mousePressEvent(self, e):
+        if e.button() == Qt.LeftButton: self.mouse_pos = e.globalPosition().toPoint()
+    def mouseMoveEvent(self, e):
+        if self.mouse_pos:
+            self.move(self.pos() + e.globalPosition().toPoint() - self.mouse_pos)
+            self.mouse_pos = e.globalPosition().toPoint()
+    def mouseDoubleClickEvent(self, e):
+        # Open full UI on double click
+        self.parent_window.restore_from_mini()
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle(f"ALEX v{CURRENT_VERSION} | CORE COMMAND")
-        self.resize(1100, 750)
+        self.setWindowTitle("ALEX // COMMAND SPHERE")
+        self.resize(1200, 800)
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setWindowFlags(Qt.FramelessWindowHint)
         self.setStyleSheet(DARK_THEME)
         
+        # Core
         self.voice = VoiceEngine()
         self.signals = WorkerSignals()
-        self.brain = Brain(self.voice, ui_signals=self.signals, task_callback=self.show_live_single)
-        
-        self.signals.update_log.connect(self.append_chat)
-        self.signals.status_changed.connect(self.update_state)
-        self.signals.update_available.connect(self._notify_update)
+        self.brain = Brain(self.voice, ui_signals=self.signals)
+        self.dashboard = MasterDashboard()
+        self.signals.log_tab.connect(self.dashboard.route_log)
 
-        self.popup_preview = ActionPreviewPopup()
-        self.popup_live = LiveExecutionPopup()
-        self.popup_result = ResultPopup()
-        self.popup_critical = CriticalConfirmationPopup()
-        
-        self.signals.show_preview.connect(self.popup_preview.show_action)
-        self.signals.show_live.connect(self.popup_live.update)
-        self.signals.show_result.connect(self._handle_result)
-        self.signals.show_critical.connect(self.popup_critical.show_critical)
-        self.popup_preview.authorized.connect(self._handle_auth)
-        self.popup_critical.confirmed.connect(self._handle_auth)
+        # Mini Mode Setup
+        self.mini_mode = MiniSphere()
+        self.mini_mode.parent_window = self
 
+        # UI
         self.main_container = QWidget(); self.main_container.setObjectName("CentralWidget")
-        self.setCentralWidget(self.main_container); self.main_layout = QVBoxLayout(self.main_container)
+        self.setCentralWidget(self.main_container)
+        self.main_layout = QVBoxLayout(self.main_container)
+        self.main_layout.setContentsMargins(30, 20, 30, 30)
 
+        # --- HEADER ---
         header = QHBoxLayout()
-        self.logo_label = QLabel(f"ALEX v{CURRENT_VERSION} // AGENTIC CORE"); self.logo_label.setObjectName("StatusLabel")
+        self.logo_label = QLabel(f"ALEX AGENTIC CORE // v{CURRENT_VERSION}"); self.logo_label.setObjectName("HeaderLabel")
         header.addWidget(self.logo_label); header.addStretch()
-        self.time_label = QLabel("00:00:00"); self.time_label.setStyleSheet("color: #00d4ff;"); header.addWidget(self.time_label)
-        close_btn = QPushButton("✕"); close_btn.setFixedSize(30, 30); close_btn.clicked.connect(self.close); header.addWidget(close_btn)
+        
+        # Navigation Buttons
+        self.mini_btn = QPushButton("MINI"); self.mini_btn.setFixedSize(60, 30); self.mini_btn.clicked.connect(self.switch_to_mini)
+        self.hide_btn = QPushButton("_"); self.hide_btn.setFixedSize(40, 30); self.hide_btn.clicked.connect(self.showMinimized)
+        close_btn = QPushButton("✕"); close_btn.setFixedSize(40, 30); close_btn.clicked.connect(self.close)
+        
+        header.addWidget(self.mini_btn); header.addWidget(self.hide_btn); header.addWidget(close_btn)
         self.main_layout.addLayout(header)
 
-        dashboard = QHBoxLayout()
-        side = QVBoxLayout(); side.addWidget(QLabel("SYSTEM VITALS")); side.addWidget(SystemStatsWidget()); side.addStretch()
-        dashboard.addLayout(side)
-        center = QVBoxLayout(); self.reactor = ReactorWidget(); self.audio_bar = AudioBar(); center.addWidget(self.reactor, 0, Qt.AlignCenter); center.addWidget(self.audio_bar, 0, Qt.AlignCenter)
-        dashboard.addLayout(center, stretch=2)
-        self.chat_area = QTextEdit(); self.chat_area.setReadOnly(True); dashboard.addWidget(self.chat_area, stretch=1)
-        self.main_layout.addLayout(dashboard)
+        # --- DASHBOARD ---
+        sphere_area = QHBoxLayout()
+        self.left_wing = QFrame(); self.left_wing.setObjectName("WingPanel"); self.left_wing.setFixedWidth(250)
+        left_layout = QVBoxLayout(self.left_wing); left_layout.addWidget(QLabel("SYSTEM ANALYTICS")); left_layout.addWidget(SystemStatsWidget()); left_layout.addStretch()
+        sphere_area.addWidget(self.left_wing)
 
-        footer = QHBoxLayout(); self.input_field = QLineEdit(); self.input_field.setPlaceholderText("ENTER COMMAND..."); self.input_field.returnPressed.connect(self.handle_text_input)
-        footer.addWidget(self.input_field); self.main_layout.addLayout(footer)
+        center_core = QVBoxLayout()
+        self.reactor = ReactorWidget(); shadow = QGraphicsDropShadowEffect(); shadow.setBlurRadius(50); shadow.setColor(QColor(0, 212, 255, 150)); shadow.setOffset(0, 0); self.reactor.setGraphicsEffect(shadow)
+        self.audio_bar = AudioBar()
+        center_core.addStretch(); center_core.addWidget(self.reactor, 0, Qt.AlignCenter); center_core.addWidget(self.audio_bar, 0, Qt.AlignCenter); center_core.addStretch()
+        sphere_area.addLayout(center_core, stretch=2)
+
+        self.right_wing = QFrame(); self.right_wing.setObjectName("WingPanel"); self.right_wing.setFixedWidth(300)
+        right_layout = QVBoxLayout(self.right_wing); right_layout.addWidget(QLabel("COMMUNICATIONS")); self.chat_area = QTextEdit(); self.chat_area.setReadOnly(True); right_layout.addWidget(self.chat_area)
+        sphere_area.addWidget(self.right_wing)
+        self.main_layout.addLayout(sphere_area)
+
+        # --- FOOTER ---
+        self.input_field = QLineEdit(); self.input_field.setPlaceholderText("TRANSMIT COMMAND..."); self.input_field.returnPressed.connect(self.handle_text_input)
+        self.main_layout.addWidget(self.input_field)
+
+        # Popups...
+        self.popup_preview = ActionPreviewPopup(); self.popup_live = LiveExecutionPopup(); self.popup_result = ResultPopup(); self.popup_critical = CriticalConfirmationPopup()
+        self.signals.show_preview.connect(self.popup_preview.show_action); self.signals.show_live.connect(self.popup_live.update); self.signals.show_result.connect(lambda m: self.popup_result.show_success(m)); self.signals.show_critical.connect(self.popup_critical.show_critical)
+        self.popup_preview.authorized.connect(self.brain.set_auth_result); self.popup_critical.confirmed.connect(self.brain.set_auth_result)
 
         self.listen_thread = ListenThread(self.voice, self.brain, self.signals); self.listen_thread.daemon = True; self.listen_thread.start()
-        self.audio_timer = QTimer(self); self.audio_timer.timeout.connect(self.update_audio); self.audio_timer.start(30)
-        self.clock_timer = QTimer(self); self.clock_timer.timeout.connect(self._update_time); self.clock_timer.start(1000)
+        self.timer = QTimer(self); self.timer.timeout.connect(self._update_loop); self.timer.start(30)
 
-        threading.Thread(target=self._update_check_thread, daemon=True).start()
-        
-        # Global Hotkey
-        try:
-            keyboard.add_hotkey('ctrl+shift+a', self._force_focus)
-        except: pass
+    def switch_to_mini(self):
+        self.hide(); self.mini_mode.show()
+    def restore_from_mini(self):
+        self.mini_mode.hide(); self.show()
 
-    def _force_focus(self):
-        self.show(); self.raise_(); self.activateWindow()
-        self.input_field.setFocus()
-        self.signals.status_changed.emit("HOTKEY TRIGGERED")
+    def _update_loop(self):
+        self.audio_bar.set_amplitude(self.voice.current_volume)
+        if self.mini_mode.isVisible(): self.mini_mode.set_state(self.reactor.state)
 
-    def _update_check_thread(self):
-        new_v = check_for_updates()
-        if new_v: self.signals.update_available.emit(new_v)
-
-    def _notify_update(self, version):
-        self.append_chat("SYSTEM", f"🚀 New version v{version} available!")
-        self.popup_result.show_success(f"Update Available: v{version}")
-
-    def _update_time(self): self.time_label.setText(datetime.datetime.now().strftime("%H:%M:%S"))
-    def _handle_auth(self, val): self.popup_preview.hide(); self.popup_critical.hide(); self.brain.set_auth_result(val)
-    def _handle_result(self, msg): self.popup_live.hide(); self.popup_result.show_success(msg)
-    def show_live_single(self, text): self.popup_live.update(1, 1, text, 100)
-    def update_audio(self): self.audio_bar.set_amplitude(self.voice.current_volume)
     def handle_text_input(self):
         cmd = self.input_field.text().strip()
-        if cmd: self.append_chat("User", cmd); self.input_field.clear(); threading.Thread(target=self.brain.process_command, args=(cmd,), daemon=True).start()
+        if cmd:
+            self.append_chat("User", cmd)
+            self.input_field.clear()
+            # Run in thread to not freeze UI
+            threading.Thread(target=self._process_and_log, args=(cmd,), daemon=True).start()
+
+    def _process_and_log(self, cmd):
+        response = self.brain.process_command(cmd)
+        if response:
+            self.signals.update_log.emit("Alex", response)
     def append_chat(self, s, m):
         c = "#00d4ff" if s == "Alex" else "#fff"
-        self.chat_area.append(f"<div style='text-align:{'left' if s=='Alex' else 'right'}'><b style='color:{c}'>{s}:</b> {m}</div>")
+        self.chat_area.append(f"<div style='margin-bottom:10px;'><b>{s.upper()}:</b> {m}</div>")
     def update_state(self, s): self.reactor.set_state(s); self.logo_label.setText(f"ALEX v{CURRENT_VERSION} // {s}")
     def mousePressEvent(self, e):
         if e.button() == Qt.LeftButton: self.drag_pos = e.globalPosition().toPoint()
