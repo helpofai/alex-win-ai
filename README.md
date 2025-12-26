@@ -1,4 +1,4 @@
-# 🛰️ Alex AI: The Agentic OS Core v4.0
+# 🛰️ Alex AI: The Agentic OS Core v4.1.0
 ### *Autonomous. Private. Enterprise-Grade.*
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
