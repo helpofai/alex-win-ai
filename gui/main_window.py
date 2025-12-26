@@ -1,6 +1,7 @@
 import sys
 import threading
 import datetime
+import keyboard
 from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                                QTextEdit, QLineEdit, QPushButton, QLabel, 
                                QFrame, QProgressBar)
@@ -17,9 +18,8 @@ from core.version import CURRENT_VERSION, check_for_updates
 class WorkerSignals(QObject):
     update_log = Signal(str, str)
     status_changed = Signal(str)
-    # Transparency Signals
     show_preview = Signal(Action)
-    show_live = Signal(int, int, str, int) # step, total, desc, progress
+    show_live = Signal(int, int, str, int)
     show_result = Signal(str)
     show_critical = Signal(str)
     update_available = Signal(str)
@@ -27,31 +27,23 @@ class WorkerSignals(QObject):
 class ListenThread(threading.Thread):
     def __init__(self, voice, brain, signals):
         super().__init__()
-        self.voice = voice
-        self.brain = brain
-        self.signals = signals
-        self.running = True
+        self.voice = voice; self.brain = brain; self.signals = signals; self.running = True
 
     def run(self):
         while self.running:
             if self.voice.mic_available:
                 self.signals.status_changed.emit("LISTENING")
                 command, audio_raw = self.voice.listen()
-                
                 if command or audio_raw is not None:
                     self.signals.status_changed.emit("PROCESSING")
                     if command: self.signals.update_log.emit("User", command)
                     response = self.brain.process_command(command, audio_raw=audio_raw)
-                    if response:
-                        self.signals.update_log.emit("Alex", response)
+                    if response: self.signals.update_log.emit("Alex", response)
                 else:
                     self.signals.status_changed.emit("IDLE")
             else:
                 self.signals.status_changed.emit("TEXT_MODE")
                 threading.Event().wait(1)
-
-    def stop(self):
-        self.running = False
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -62,7 +54,6 @@ class MainWindow(QMainWindow):
         self.setWindowFlags(Qt.FramelessWindowHint)
         self.setStyleSheet(DARK_THEME)
         
-        # 1. Signals & Core
         self.voice = VoiceEngine()
         self.signals = WorkerSignals()
         self.brain = Brain(self.voice, ui_signals=self.signals, task_callback=self.show_live_single)
@@ -71,31 +62,25 @@ class MainWindow(QMainWindow):
         self.signals.status_changed.connect(self.update_state)
         self.signals.update_available.connect(self._notify_update)
 
-        # 2. Popups
         self.popup_preview = ActionPreviewPopup()
         self.popup_live = LiveExecutionPopup()
         self.popup_result = ResultPopup()
         self.popup_critical = CriticalConfirmationPopup()
         
-        # Connections
         self.signals.show_preview.connect(self.popup_preview.show_action)
         self.signals.show_live.connect(self.popup_live.update)
         self.signals.show_result.connect(self._handle_result)
         self.signals.show_critical.connect(self.popup_critical.show_critical)
-        
         self.popup_preview.authorized.connect(self._handle_auth)
         self.popup_critical.confirmed.connect(self._handle_auth)
 
-        # UI Setup
         self.main_container = QWidget(); self.main_container.setObjectName("CentralWidget")
-        self.setCentralWidget(self.main_container)
-        self.main_layout = QVBoxLayout(self.main_container)
+        self.setCentralWidget(self.main_container); self.main_layout = QVBoxLayout(self.main_container)
 
-        # --- Dashboard ---
         header = QHBoxLayout()
         self.logo_label = QLabel(f"ALEX v{CURRENT_VERSION} // AGENTIC CORE"); self.logo_label.setObjectName("StatusLabel")
-        header.addWidget(self.logo_label); header.addStretch(); 
-        self.time_label = QLabel("00:00:00"); self.time_label.setStyleSheet("color: #00d4ff; font-family: Consolas;"); header.addWidget(self.time_label)
+        header.addWidget(self.logo_label); header.addStretch()
+        self.time_label = QLabel("00:00:00"); self.time_label.setStyleSheet("color: #00d4ff;"); header.addWidget(self.time_label)
         close_btn = QPushButton("✕"); close_btn.setFixedSize(30, 30); close_btn.clicked.connect(self.close); header.addWidget(close_btn)
         self.main_layout.addLayout(header)
 
@@ -110,53 +95,43 @@ class MainWindow(QMainWindow):
         footer = QHBoxLayout(); self.input_field = QLineEdit(); self.input_field.setPlaceholderText("ENTER COMMAND..."); self.input_field.returnPressed.connect(self.handle_text_input)
         footer.addWidget(self.input_field); self.main_layout.addLayout(footer)
 
-        # AI Thread
         self.listen_thread = ListenThread(self.voice, self.brain, self.signals); self.listen_thread.daemon = True; self.listen_thread.start()
-        
         self.audio_timer = QTimer(self); self.audio_timer.timeout.connect(self.update_audio); self.audio_timer.start(30)
         self.clock_timer = QTimer(self); self.clock_timer.timeout.connect(self._update_time); self.clock_timer.start(1000)
 
-        # Check for updates
         threading.Thread(target=self._update_check_thread, daemon=True).start()
+        
+        # Global Hotkey
+        try:
+            keyboard.add_hotkey('ctrl+shift+a', self._force_focus)
+        except: pass
+
+    def _force_focus(self):
+        self.show(); self.raise_(); self.activateWindow()
+        self.input_field.setFocus()
+        self.signals.status_changed.emit("HOTKEY TRIGGERED")
 
     def _update_check_thread(self):
         new_v = check_for_updates()
         if new_v: self.signals.update_available.emit(new_v)
 
     def _notify_update(self, version):
-        self.append_chat("SYSTEM", f"🚀 A new version (v{version}) is available on GitHub!")
+        self.append_chat("SYSTEM", f"🚀 New version v{version} available!")
         self.popup_result.show_success(f"Update Available: v{version}")
 
-    def _update_time(self):
-        self.time_label.setText(datetime.datetime.now().strftime("%H:%M:%S"))
-
-    def _handle_auth(self, val):
-        self.popup_preview.hide(); self.popup_critical.hide()
-        self.brain.set_auth_result(val)
-
-    def _handle_result(self, msg):
-        self.popup_live.hide(); self.popup_result.show_success(msg)
-
-    def show_live_single(self, text):
-        self.popup_live.update(1, 1, text, 100)
-
-    def update_audio(self):
-        self.audio_bar.set_amplitude(self.voice.current_volume)
-
+    def _update_time(self): self.time_label.setText(datetime.datetime.now().strftime("%H:%M:%S"))
+    def _handle_auth(self, val): self.popup_preview.hide(); self.popup_critical.hide(); self.brain.set_auth_result(val)
+    def _handle_result(self, msg): self.popup_live.hide(); self.popup_result.show_success(msg)
+    def show_live_single(self, text): self.popup_live.update(1, 1, text, 100)
+    def update_audio(self): self.audio_bar.set_amplitude(self.voice.current_volume)
     def handle_text_input(self):
         cmd = self.input_field.text().strip()
         if cmd: self.append_chat("User", cmd); self.input_field.clear(); threading.Thread(target=self.brain.process_command, args=(cmd,), daemon=True).start()
-
-    def append_chat(self, sender, message):
-        color = "#00d4ff" if sender == "Alex" else "#fff"
-        align = "left" if sender == "Alex" else "right"
-        self.chat_area.append(f"<div style='text-align:{align}'><b style='color:{color}'>{sender}:</b> {message}</div>")
-
-    def update_state(self, status):
-        self.reactor.set_state(status)
-        self.logo_label.setText(f"ALEX v{CURRENT_VERSION} // {status}")
-
-    def mousePressEvent(self, event):
-        if event.button() == Qt.LeftButton: self.drag_pos = event.globalPosition().toPoint()
-    def mouseMoveEvent(self, event):
-        if event.buttons() == Qt.LeftButton: self.move(self.pos() + event.globalPosition().toPoint() - self.drag_pos); self.drag_pos = event.globalPosition().toPoint(); event.accept()
+    def append_chat(self, s, m):
+        c = "#00d4ff" if s == "Alex" else "#fff"
+        self.chat_area.append(f"<div style='text-align:{'left' if s=='Alex' else 'right'}'><b style='color:{c}'>{s}:</b> {m}</div>")
+    def update_state(self, s): self.reactor.set_state(s); self.logo_label.setText(f"ALEX v{CURRENT_VERSION} // {s}")
+    def mousePressEvent(self, e):
+        if e.button() == Qt.LeftButton: self.drag_pos = e.globalPosition().toPoint()
+    def mouseMoveEvent(self, e):
+        if e.buttons() == Qt.LeftButton: self.move(self.pos() + e.globalPosition().toPoint() - self.drag_pos); self.drag_pos = e.globalPosition().toPoint(); e.accept()
