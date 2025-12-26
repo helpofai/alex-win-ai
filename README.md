@@ -3,8 +3,8 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Python: 3.14+](https://img.shields.io/badge/Python-3.14+-blue.svg)](https://www.python.org/)
-[![Security: Zero--Trust](https://img.badge/Security-Zero--Trust-red.svg)](#security-model)
-[![Architecture: SoC--Brain](https://img.badge/Architecture-SoC--Brain-cyan.svg)](#the-society-of-brains)
+[![Security: Zero--Trust](https://img.shields.io/badge/Security-Zero--Trust-red.svg)](#security-model)
+[![Architecture: SoC--Brain](https://img.shields.io/badge/Architecture-SoC--Brain-cyan.svg)](#the-society-of-brains)
 
 ---
 
