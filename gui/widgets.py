@@ -123,12 +123,27 @@ class SystemStatsWidget(QWidget):
         self.ram_label = QLabel("RAM: 0%")
         self.ram_bar = QProgressBar()
         
-        for widget in [self.cpu_label, self.cpu_bar, self.ram_label, self.ram_bar]:
+        # LM Studio Status
+        self.ai_status_label = QLabel("BRAIN: CHECKING...")
+        self.ai_status_label.setStyleSheet("color: #ffff00; font-weight: bold; font-size: 10px; margin-top: 10px;")
+        
+        for widget in [self.cpu_label, self.cpu_bar, self.ram_label, self.ram_bar, self.ai_status_label]:
             self.layout.addWidget(widget)
             
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_stats)
         self.timer.start(2000)
+
+    def set_ai_status(self, status_code):
+        if status_code == "READY":
+            self.ai_status_label.setText("BRAIN: CONNECTED")
+            self.ai_status_label.setStyleSheet("color: #00ff00; font-weight: bold; font-size: 10px; margin-top: 10px;")
+        elif status_code == "NOT_CONFIGURED":
+            self.ai_status_label.setText("BRAIN: DISCONNECTED")
+            self.ai_status_label.setStyleSheet("color: #ffaa00; font-weight: bold; font-size: 10px; margin-top: 10px;")
+        else: # NOT_INSTALLED or others
+            self.ai_status_label.setText("BRAIN: OFFLINE")
+            self.ai_status_label.setStyleSheet("color: #ff3333; font-weight: bold; font-size: 10px; margin-top: 10px;")
 
     def update_stats(self):
         import psutil

@@ -1,6 +1,6 @@
 import requests
 
-CURRENT_VERSION = "4.1.1"
+CURRENT_VERSION = "4.2.0"
 # Use /tags endpoint as it detects our 'git tag' pushes immediately
 REPO_URL = "https://api.github.com/repos/helpofai/alex-win-ai/tags"
 

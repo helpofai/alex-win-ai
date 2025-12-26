@@ -101,7 +101,13 @@ class MainWindow(QMainWindow):
 
         sphere_area = QHBoxLayout()
         self.left_wing = QFrame(); self.left_wing.setObjectName("WingPanel"); self.left_wing.setFixedWidth(250)
-        left_layout = QVBoxLayout(self.left_wing); left_layout.addWidget(QLabel("SYSTEM ANALYTICS")); left_layout.addWidget(SystemStatsWidget()); left_layout.addStretch(); sphere_area.addWidget(self.left_wing)
+        left_layout = QVBoxLayout(self.left_wing); left_layout.addWidget(QLabel("SYSTEM ANALYTICS"))
+        
+        # System Stats Widget
+        self.stats_widget = SystemStatsWidget()
+        left_layout.addWidget(self.stats_widget)
+        
+        left_layout.addStretch(); sphere_area.addWidget(self.left_wing)
 
         center_core = QVBoxLayout()
         self.reactor = ReactorWidget(); shadow = QGraphicsDropShadowEffect(); shadow.setBlurRadius(50); shadow.setColor(QColor(0, 212, 255, 150)); shadow.setOffset(0, 0); self.reactor.setGraphicsEffect(shadow)
@@ -118,12 +124,29 @@ class MainWindow(QMainWindow):
         self.popup_preview.authorized.connect(self.brain.set_auth_result); self.popup_critical.confirmed.connect(self.brain.set_auth_result)
 
         self.listen_thread = ListenThread(self.voice, self.brain, self.signals); self.listen_thread.daemon = True; self.listen_thread.start()
-        self.timer = QTimer(self); self.timer.timeout.connect(self._update_loop); self.timer.start(30)
+        self.audio_timer = QTimer(self); self.audio_timer.timeout.connect(self.update_audio); self.audio_timer.start(30)
+        self.clock_timer = QTimer(self); self.clock_timer.timeout.connect(self._update_time); self.clock_timer.start(1000)
+        
+        # AI Status Polling
+        self.ai_poll_timer = QTimer(self); self.ai_poll_timer.timeout.connect(self._poll_ai_status); self.ai_poll_timer.start(5000)
+
+        # 3. Initialization Checks
+        QTimer.singleShot(2000, self._check_brain_readiness)
+        threading.Thread(target=self._update_check_thread, daemon=True).start()
         try: keyboard.add_hotkey('ctrl+shift+a', self._force_focus)
         except: pass
 
-        # Check for updates in background
-        threading.Thread(target=self._update_check_thread, daemon=True).start()
+    def _poll_ai_status(self):
+        status, _ = self.brain.check_llm_readiness()
+        self.stats_widget.set_ai_status(status)
+
+    def _check_brain_readiness(self):
+        status, msg = self.brain.check_llm_readiness()
+        self.stats_widget.set_ai_status(status)
+        if status != "READY":
+            self.append_chat("SYSTEM", f"⚠️ <b style='color:#ff3333'>BRAIN OFFLINE:</b> {msg}")
+            self.append_chat("INSTRUCTIONS", "1. Open <b>LM Studio</b><br>2. Go to 'Local Server' tab<br>3. Click <b>'Start Server'</b><br>4. Ensure Port is <b>1234</b>")
+            self.popup_result.show_success("Setup Required")
 
     def _update_check_thread(self):
         new_v = check_for_updates()
@@ -136,10 +159,8 @@ class MainWindow(QMainWindow):
     def switch_to_mini(self): self.hide(); self.mini_mode.show()
     def restore_from_mini(self): self.mini_mode.hide(); self.show()
     def _force_focus(self): self.show(); self.raise_(); self.activateWindow(); self.input_field.setFocus()
-    def _update_loop(self):
-        self.audio_bar.set_amplitude(self.voice.current_volume)
-        self.time_label.setText(f"SYSTEM TIME: {datetime.datetime.now().strftime('%H:%M:%S')}")
-        if self.mini_mode.isVisible(): self.mini_mode.set_state(self.reactor.state)
+    def _update_time(self): self.time_label.setText(f"SYSTEM TIME: {datetime.datetime.now().strftime('%H:%M:%S')}")
+    def update_audio(self): self.audio_bar.set_amplitude(self.voice.current_volume)
     def handle_text_input(self):
         cmd = self.input_field.text().strip()
         if cmd:
@@ -150,6 +171,8 @@ class MainWindow(QMainWindow):
         if res: self.signals.update_log.emit("Alex", res)
     def append_chat(self, s, m):
         c = "#00d4ff" if s == "Alex" else "#fff"
+        if s == "SYSTEM": c = "#ffaa00"
+        if s == "INSTRUCTIONS": c = "#00ffaa"
         self.chat_area.append(f"<div style='margin-bottom:10px;'><b>{s.upper()}:</b> {m}</div>")
     def show_live_single(self, text): self.popup_live.update(1, 1, text, 100)
     def update_state(self, s): self.reactor.set_state(s); self.logo_label.setText(f"ALEX v{CURRENT_VERSION} // {s}")

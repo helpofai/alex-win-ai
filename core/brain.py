@@ -51,38 +51,55 @@ class Brain:
         self.vision_cortex = VisionCortex(); self.security = SecurityEngine()
         self.biometrics = BiometricEngine(); self.face_id = FaceEngine()
         self.episodic = EpisodicMemory(); self.copilot = CodebaseExplorer()
-        self.researcher = DeepResearcher(self); self.empathy = EmpathyEngine()
-        self.correction = CorrectionEngine(); self.reflector = ExperienceReflector(self)
-        self.sysadmin = SysAdmin(); self.sandbox = CodeSandbox(); self.ddgs = DDGS()
-        self.ui_inspector = UIInspector(); self.ceo = CEOBrain(self)
+        self.sandbox = CodeSandbox(); self.researcher = DeepResearcher(self)
+        self.empathy = EmpathyEngine(); self.correction = CorrectionEngine()
+        self.reflector = ExperienceReflector(self); self.sysadmin = SysAdmin()
+        self.ui_inspector = UIInspector(); self.ddgs = DDGS(); self.ceo = CEOBrain(self)
         
         self.auth_event = threading.Event(); self.auth_granted = False
         self.user_mood = "Neutral"; self.last_command = None; self.pending_correction = False; self.is_enrolling = False
         
+        # Start Monitor
         self.monitor.start(); threading.Thread(target=self.app_discovery.full_scan, daemon=True).start()
+        
         loaded_history = self.memory.load_history()
         self.chat_history = loaded_history if loaded_history else [{"role": "system", "content": self._get_system_prompt()}]
-        print("[Intent Engine] Universal Semantic Awareness Online.")
+        print("[Intent Engine] Full System Integration Online.")
+
+    def check_llm_readiness(self):
+        try:
+            res = requests.get(self.models_url, timeout=2)
+            if res.status_code == 200: return "READY", "Connected"
+        except: pass
+        is_installed = os.path.exists(os.path.join(os.environ["LOCALAPPDATA"], "LM-Studio"))
+        if is_installed: return "NOT_CONFIGURED", "Server not running on port 1234."
+        return "NOT_INSTALLED", "LM Studio not detected."
 
     def _get_system_prompt(self):
-        ctx_visual = self.vision_cortex.get_context_string()
-        ctx_semantic = self.ui_inspector.get_active_window_text()
+        ctx = self.vision_cortex.get_context_string()
+        apps = self.app_discovery.get_app_summary()
         return f"""
-        You are Alex, an autonomous agent.
-        SIGHT: {ctx_visual}
-        WINDOW_STRUCTURE: {ctx_semantic}
-        
-        PROTOCOL: Use EXECUTE: step1 | step2.
-        Every action you take MUST be based on the current WINDOW_STRUCTURE and SIGHT.
+        You are Alex, the CEO-Brain of a high-performance PC AI workstation.
+        CONTEXT: {ctx}
+        INSTALLED APPS: {apps}
+        PROTOCOL: Use EXECUTE: step1 | step2 for actions.
         """
 
     def process_command(self, command, audio_raw=None):
         if not command: return
         command = command.lower().strip()
         
-        # Mandatory context refresh before any decision
-        self._log_to_dashboard("activity", "Scanning system state and window contents...")
-        
+        # Check readiness
+        status, _ = self.check_llm_readiness()
+        if status != "READY":
+            # Fast-track open commands even without LLM if possible
+            if self._is_local_command(command): 
+                return self._execute_single_command(command)
+            return "Local Brain Offline. Please connect LM Studio."
+
+        # Logging to dashboard
+        self._log_to_dashboard("activity", f"Processing: {command}")
+
         if self.use_llm:
             self.chat_history[0]["content"] = self._get_system_prompt()
             response = self.query_lm_studio(command)
@@ -93,14 +110,19 @@ class Brain:
                     return response
                 else:
                     self.voice.speak(response); return response
-        
+
         return self._execute_single_command(command)
 
-    def _run_action_chain_internal(self, actions, original_cmd, full_response, audio_raw):
-        action_obj = Action(title=f"Task: {original_cmd[:20]}", desc=full_response, tool="Agent Core", risk_score=self.security.get_risk_score(actions), steps=actions)
+    def _is_local_command(self, command):
+        """Checks if a command can be executed locally without LLM."""
+        local_prefixes = ["open ", "volume ", "lock pc", "click text ", "say "]
+        return any(command.startswith(p) for p in local_prefixes) or command == "lock pc"
+
+    def _run_action_chain_internal(self, actions, cmd, full_resp, audio_raw):
+        score = self.security.get_risk_score(actions)
+        action_obj = Action(title=f"Task: {cmd[:20]}", desc=full_resp, tool="Agent Core", risk_score=score, steps=actions)
         if self.ui_signals:
-            self.auth_event.clear(); self.ui_signals.show_preview.emit(action_obj)
-            self.auth_event.wait()
+            self.auth_event.clear(); self.ui_signals.show_preview.emit(action_obj); self.auth_event.wait()
             if not self.auth_granted: return
         self._run_action_chain(action_obj)
 
@@ -108,55 +130,54 @@ class Brain:
         total = len(action_obj.steps)
         for i, step in enumerate(action_obj.steps):
             step = step.strip()
-            # 1. Update live UI
+            self._log_to_dashboard("activity", f"Executing: {step}")
             if self.ui_signals: self.ui_signals.show_live.emit(i+1, total, step, int(((i+1)/total)*100))
-            
-            # 2. PERFORM SEMANTIC PRE-CHECK
-            print(f"[Brain] Validating step: {step}")
-            self._log_to_dashboard("activity", f"Validating visual target for: {step}")
-            
-            # 3. REAL EXECUTION
             res = self._execute_single_command(step)
-            
-            # 4. LOG DATA
-            if self.ui_signals and res: self._log_to_dashboard("data", f"Result: {res}")
+            if self.ui_signals and res: self._log_to_dashboard("data", str(res))
             time.sleep(0.5)
-            
         if self.ui_signals: self.ui_signals.show_result.emit("Task Complete")
         return "Success"
 
     def _execute_single_command(self, action):
         if not action: return
         if self.task_callback: self.task_callback(action)
-        
-        # --- DYNAMIC SEMANTIC EXECUTION ---
+        print(f"[Executor] {action}")
+
+        # --- ROUTING ---
+        cat = "browser" if any(x in action for x in ["read", "search", "google", "youtube"]) else "files" if "open" in action else "activity"
+
+        if action.startswith("open "):
+            target = action.replace("open ","").strip()
+            app = self.app_discovery.find_app(target)
+            if app:
+                path = app["path"]
+                self.voice.speak(f"Opening {app['name']}")
+                try:
+                    cmd = f'powershell -Command "Invoke-Item \'{path}\'"'
+                    subprocess.Popen(cmd, shell=True)
+                    res = f"Launched {app['name']}"; self._log_to_dashboard("files", res); return res
+                except: return "Launch Failed"
+            if "." in target: return self.system_ctrl.open_url(target)
+            return "App not found."
+
         if action.startswith("click text "):
             t = action.replace("click text ","").strip()
-            # Try finding via UI Automation first (faster/more accurate)
-            # (In a full impl, we'd find the element in ui_inspector and get its rect)
             c = self.vision_cortex.find_text_coordinates(t)
             if c:
                 if self.ui_signals: self.ui_signals.show_ripple.emit(c[0], c[1])
                 return self.automation.click_coordinates(c[0], c[1])
-            return f"Error: '{t}' not visible in current context."
+            return "Text not found"
 
-        if action.startswith("open "):
-            app = self.app_discovery.find_app(action[5:])
-            if app: 
-                path = app["path"]
-                subprocess.Popen(f'powershell -Command "Invoke-Item \'{path}\'"', shell=True)
-                return f"Launched {app['name']}"
-            return "App not found"
+        if action.startswith("say "): self.voice.speak(action[4:].strip()); return "Spoken"
+        if action.startswith("search "): 
+            res = self.researcher.perform_deep_research(action[7:].strip())
+            self._log_to_dashboard("browser", res); return res
+
+        if action.startswith("volume "): return self.system_ctrl.set_volume(int(action.split()[1]))
+        if action == "lock pc": return self.system_ctrl.lock_pc()
         
-        if action.startswith("say "): self.voice.speak(action[4:]); return "Spoken"
-        
-        # General Routing
-        if "search" in action or "read" in action: cat = "browser"
-        elif "open" in action: cat = "files"
-        else: cat = "activity"
-        if self.ui_signals: self.ui_signals.log_tab.emit(cat, f"Completed: {action}")
-        
-        return "Done"
+        self._log_to_dashboard(cat, f"Action completed: {action}")
+        return "Success"
 
     def _log_to_dashboard(self, category, text):
         if self.ui_signals: self.ui_signals.log_tab.emit(category, text)
@@ -171,7 +192,11 @@ class Brain:
     def query_lm_studio(self, p):
         try:
             if not self.current_model: self.current_model = self.get_active_model()
-            self.chat_history.append({"role": "user", "content": p})
-            r = requests.post(self.local_server_url, json={"model": self.current_model, "messages": self.chat_history, "temperature": 0.2}, timeout=20)
-            return r.json()["choices"][0]["message"]["content"].strip() if r.status_code == 200 else None
+            r = requests.post(self.local_server_url, json={"model": self.current_model, "messages": self.chat_history + [{"role":"user","content":p}], "temperature": 0.2}, timeout=20)
+            if r.status_code == 200:
+                t = r.json()["choices"][0]["message"]["content"].strip()
+                self.chat_history.append({"role": "user", "content": p})
+                self.chat_history.append({"role": "assistant", "content": t})
+                return t
+            return None
         except: return None
