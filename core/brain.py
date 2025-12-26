@@ -143,7 +143,8 @@ class Brain:
         if action.startswith("open "):
             app = self.app_discovery.find_app(action[5:])
             if app: 
-                subprocess.Popen(f'powershell -Command "Invoke-Item \'{app[\'path\']}\""', shell=True)
+                path = app["path"]
+                subprocess.Popen(f'powershell -Command "Invoke-Item \'{path}\'"', shell=True)
                 return f"Launched {app['name']}"
             return "App not found"
         
