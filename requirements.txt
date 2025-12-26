@@ -17,7 +17,7 @@ screen-brightness-control
 pyperclip
 pygetwindow
 trafilatura
-duckduckgo-search
+ddgs
 easyocr
 torch
 torchvision

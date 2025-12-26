@@ -57,17 +57,30 @@ class VisionCortex:
     def find_text_coordinates(self, target_text):
         """Searches for a specific text on screen and returns its center coordinates."""
         blocks = self.ocr_screen()
-        target_text = target_text.lower()
+        if not blocks: return None
         
+        target_text = target_text.lower()
         for block in blocks:
             if target_text in block["text"].lower():
-                # Get center of the bounding box
                 bbox = block["box"]
                 x_center = (bbox[0][0] + bbox[1][0]) / 2
                 y_center = (bbox[0][1] + bbox[2][1]) / 2
                 return [int(x_center), int(y_center)]
         return None
 
+    def verify_text_on_screen(self, target_text):
+        """Checks if a specific text is currently visible."""
+        blocks = self.ocr_screen()
+        target_text = target_text.lower()
+        return any(target_text in b["text"].lower() for b in blocks)
+
     def get_context_string(self):
         ctx = self.get_screen_context()
-        return f"Currently focus is on '{ctx['active_window']}' window. Cursor is at {ctx['cursor_pos']['x']}, {ctx['cursor_pos']['y']}."
+        labels = self.get_all_ui_labels()
+        labels_str = ", ".join(labels[:15]) # Top 15 labels
+        return f"Currently focus is on '{ctx['active_window']}'. Visible elements: [{labels_str}]. Cursor at {ctx['cursor_pos']['x']}, {ctx['cursor_pos']['y']}."
+
+    def get_all_ui_labels(self):
+        """Returns a list of all text strings currently visible on screen."""
+        blocks = self.ocr_screen()
+        return [b["text"] for b in blocks if b["confidence"] > 0.5]

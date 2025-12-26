@@ -61,8 +61,8 @@ class HealthMonitor(threading.Thread):
 
     def _check_internet(self):
         try:
-            socket.create_connection(("8.8.8.8", 53), timeout=3)
-            return True
+            with socket.create_connection(("8.8.8.8", 53), timeout=3) as sock:
+                return True
         except:
             return False
 

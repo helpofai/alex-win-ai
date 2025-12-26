@@ -68,7 +68,7 @@ class AppDiscovery:
                             "name": parts[0],
                             "type": "uwp",
                             "identity": family_name,
-                            "path": f"shell:AppsFolder\{family_name}!App", # Approximate
+                            "path": rf"shell:AppsFolder\{family_name}!App", # Approximate
                             "category": self._guess_category(name)
                         }
         except Exception as e:
@@ -99,3 +99,17 @@ class AppDiscovery:
         if matches: return self.apps[matches[0]]
         
         return None
+
+    def get_app_summary(self):
+        """Returns a concise string of available apps for AI context."""
+        summary = {}
+        for app in self.apps.values():
+            cat = app.get("category", "general")
+            if cat not in summary: summary[cat] = []
+            if len(summary[cat]) < 10: # Cap at 10 per category to save tokens
+                summary[cat].append(app["name"])
+        
+        lines = []
+        for cat, names in summary.items():
+            lines.append(f"- {cat.upper()}: {', '.join(names)}")
+        return "\n".join(lines)
