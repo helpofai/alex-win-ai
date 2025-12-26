@@ -33,11 +33,6 @@ Alex operates through a coordinated layer of specialist agents managed by a cent
 *   **Live OCR**: Real-time extraction of screen text for debugging, research, and summarization.
 *   **Focus-Awareness**: Alex monitors your active applications. If you are in an IDE or a game, he enters "Tactical Mode," reducing interruptions and speaking only for critical alerts.
 
-### 🎙️ Hybrid Neural Voice
-*   **Neural Synthesis**: Powered by `Edge TTS` for near-human, Jarvis-like vocal inflections.
-*   **Offline Fallback**: Automatically switches to local `pyttsx3` if the internet connection is lost.
-*   **Emotional Tags**: Supports non-verbal cues like `(laughs)`, `(sighs)`, and `(chuckle)` for realistic interaction.
-
 ---
 
 ## 🛡️ Security Model: Military-Grade
@@ -49,6 +44,44 @@ Alex is built on a **Zero-Trust** foundation to ensure the AI remains an asset, 
     *   **Voice Fingerprinting**: Uses spectral analysis to verify the user's unique vocal profile.
 *   **Transparency HUD**: Every autonomous move is displayed in a semi-transparent "Glass UI" popup for real-time auditability.
 *   **Critical Confirmation**: Actions like file deletion or system shutdown require an explicit, typed `CONFIRM` code from the authorized user.
+
+---
+
+## 🛠️ Advanced Developer Guide
+
+### 🧱 Modular Specialist Architecture
+Alex is designed for infinite expansion. The core logic is decoupled into "Specialist Brains." To add a new capability, you don't modify the core; you add a new Specialist.
+
+#### **Adding a New "Skill" (Hot-Loading)**
+Alex can autonomously create skills, but you can also manually add them to the `skills/` directory. A skill is a standalone Python script that the **CEO Brain** can call.
+1.  Place your script in `skills/my_tool.py`.
+2.  The script can use standard library or project utilities.
+3.  Execute via voice: *"Alex, run skill my_tool."*
+
+#### **Extending the Intent Engine**
+To add a new native command to the **Specialist Execution Layer**:
+1.  Open `core/brain.py`.
+2.  Add a handler in `_execute_single_command(self, action)`.
+3.  Example:
+    ```python
+    if action.startswith("fire_lasers"):
+        return self.hardware_controller.trigger_relay()
+    ```
+
+### 🧬 Biometric Enrollment API
+Developers must enroll their identity before Alex grants access to `High` or `Critical` risk tiers.
+- **Voice Enrollment**: Trigger `self.biometrics.enroll(audio_data)`. Internally, this generates a 10-point spectral envelope.
+- **Face Enrollment**: Trigger `self.face_id.enroll()`. This captures 30 samples and trains a local LBPH model.
+
+### 🪟 Transparency HUD Integration
+Every specialist action should be reported to the HUD for auditability. Use the `task_callback`:
+```python
+if self.task_callback:
+    self.task_callback("Optimizing Database...")
+```
+
+### 🧪 Debugging & Simulation
+Toggle **Simulation Mode** in the config to preview all actions in the HUD without real-world execution. Use the **Developer Co-Pilot** to visually debug runtime errors in the Alex console itself.
 
 ---
 
@@ -73,18 +106,7 @@ Alex is built on a **Zero-Trust** foundation to ensure the AI remains an asset, 
 3.  **Connect the Brain**:
     Open LM Studio, load a model (e.g., Llama 3 or LLaVA for vision), and start the Local Server.
 4.  **Initialize Alex**:
-    Double-click `run.bat` or execute:
-    ```bash
-    python main.py
-    ```
-
----
-
-## 🛠️ Developer Guide: Expanding Alex
-Alex is designed to be infinitely modular. To add a new capability:
-1.  Create a new script in the `skills/` folder.
-2.  Tell Alex: *"Alex, whenever I say [keyword], run the [script_name] skill."*
-3.  Alex will update his **Skill Graph** and integrate the new command into his logic.
+    Double-click `run.bat` or execute `python main.py`.
 
 ---
 
