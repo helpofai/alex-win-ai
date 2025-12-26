@@ -3,72 +3,98 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Python: 3.14+](https://img.shields.io/badge/Python-3.14+-blue.svg)](https://www.python.org/)
-[![Security: Zero--Trust](https://img.shields.io/badge/Security-Zero--Trust-red.svg)](#security-model)
-[![Architecture: SoC--Brain](https://img.shields.io/badge/Architecture-SoC--Brain-cyan.svg)](#the-society-of-brains)
-
-Alex AI is a sophisticated, JARVIS-style autonomous desktop agent designed for secure, high-performance PC orchestration. Utilizing a **Society of Brains (SoC)** architecture, Alex plans, executes, and reflects on complex tasks while maintaining a 100% private local footprint.
+[![Security: Zero--Trust](https://img.badge/Security-Zero--Trust-red.svg)](#security-model)
+[![Architecture: SoC--Brain](https://img.badge/Architecture-SoC--Brain-cyan.svg)](#the-society-of-brains)
 
 ---
 
 ## 🏛️ System Architecture: The Society of Brains
-Alex operates through a coordinated layer of specialist agents managed by a central orchestrator:
-
-1.  **CEO Brain (Orchestrator)**: The primary reasoning engine with a `Plan-Execute-Reflect` loop.
-2.  **Visual Cortex**: Local OCR (`EasyOCR`) and UI grounding.
-3.  **Security Gate (Zero-Trust)**: Risk-scored actions (0-100) with biometric MFA.
-4.  **Specialist Executors**: Multi-tab dashboard for Browser, Files, Debugger, and Network tasks.
-5.  **Memory Layer**: Episodic and Semantic memory for persistent learning.
+Alex operates via a **Decentralized Agentic Mesh**. Instead of a single model, Alex coordinates a "Society" of specialist agents:
+*   **CEO-Brain (Orchestrator)**: The master logic engine using a `Plan-Execute-Reflect` loop.
+*   **Visual Cortex**: High-speed local OCR and UI grounding for screen-content awareness.
+*   **Memory specialist**: Dual-layer memory (Episodic Experience + Semantic Facts).
+*   **SysAdmin specialist**: Direct kernel-level interaction for registry and network operations.
 
 ---
 
-## 🔥 Key Capabilities
+## 🔥 Enterprise Features
 
-### 🧠 Autonomous Execution & Self-Evolution
-*   **Intent Engine**: Automated multi-step planning and self-correction loop.
-*   **Skill Creation**: Alex autonomously writes, installs, and executes Python "skills" (`skills/`) to solve new problems.
-*   **PowerShell Protocol**: High-reliability app launching for both classic EXE and UWP Store apps.
+### 🧠 Autonomous Agentic Intelligence
+| Feature | Description |
+| :--- | :--- |
+| **Recursive Planning** | CEO-Brain generates multi-stage `THOUGHT` and `PLAN` blocks before execution. |
+| **Self-Correction** | Real-time monitoring of task outcomes; Alex replans automatically if a command fails. |
+| **Self-Evolution** | Alex writes, compiles, and installs its own Python "skills" to expand its native capabilities. |
+| **Deep Research** | Multi-source web verification; scrapes top 5 results to cross-reference and detect misinformation. |
 
-### 👁️ Contextual Awareness & Master Dashboard
-*   **Command Sphere UI**: A borderless holographic "Cockpit" with real-time system vitals and a floating mini-mode.
-*   **Multi-Tab Data Center**: Automatic specialized tabs (Files, Browser, Debugger, Learning) that open and auto-close based on AI activity.
-*   **Global Hotkey**: Trigger Alex instantly from anywhere using `Ctrl + Shift + A`.
+### 👁️ Universal UI Navigation
+*   **Semantic Grounding**: Can identify and click any UI element based on text description rather than coordinates.
+*   **Multi-Monitor Support**: Intelligent popup positioning based on real-time cursor tracking.
+*   **Contextual Senses**: Real-time awareness of active windows, system load, and user focus state.
 
-### 🎙️ Total Offline Independence
-*   **Local STT (Vosk)**: 100% offline speech recognition—no data leaves your PC.
-*   **Neural TTS (Edge)**: High-quality neural voice with local `pyttsx3` fallback.
-*   **Emotional Reactions**: Syncs speech with physical sound effects like `(laughs)` or `(sighs)`.
+### 🎙️ Total Independence & Hybrid Voice
+*   **100% Offline STT**: Powered by **Vosk**; your voice data never leaves your local machine.
+*   **Neural TTS**: High-fidelity speech via **Edge TTS** with JARVIS-style emotional modulation.
+*   **Emotional Tags**: Supports sync-play reactions like `(laughs)`, `(sighs)`, or `(chuckle)`.
 
----
-
-## 🛡️ Security Model
-*   **Dual-Biometric Verification**: Face ID (OpenCV) + Voice Fingerprinting (Spectral Analysis).
-*   **Transparency HUD**: Real-time "Glass UI" popups for Action Preview, Live Progress, and Critical Alerts.
-*   **Critical Confirmation**: High-impact commands require a typed `CONFIRM` code.
+### 🛡️ Zero-Trust Security Model
+*   **Risk Scoring**: Every action is assigned a score (0-100). High-risk chains trigger mandatory MFA.
+*   **Dual Biometrics**: Secure authorization via **Face ID** (OpenCV) and **Voice Fingerprinting** (Spectral Analysis).
+*   **Transparency HUD**: Four distinct window tiers (Preview, Live, Result, Critical) ensure full auditability.
 
 ---
 
 ## 🚀 Installation & Setup
 
-### Prerequisites
-- Windows 10/11
-- Python 3.10+ (Fully tested on v3.14)
-- [LM Studio](https://lmstudio.ai/) (Local server on port 1234)
+### 💻 System Requirements
+*   **OS**: Windows 10/11 (64-bit).
+*   **Python**: v3.10 to v3.14 (Recommended).
+*   **Hardware**: 8GB RAM minimum. *GPU acceleration (NVIDIA) recommended for OCR speed.*
 
-### Quick Start
-1.  **Clone & Install**:
-    ```bash
+### 🛠️ Step-by-Step Deployment
+1.  **Initialize Environment**:
+    ```powershell
     git clone https://github.com/helpofai/alex-win-ai.git
     cd alex-win-ai
+    python -m venv venv
+    .\venv\Scripts\activate
+    ```
+2.  **Install Core Dependencies**:
+    ```powershell
     pip install -r requirements.txt
     ```
-2.  **Run**:
-    Double-click `run.bat`.
-3.  **Enroll**:
-    Say: *"Alex, enroll my face"* and *"Alex, enroll my voice."*
+3.  **Configure Local Brain**:
+    Download and launch [LM Studio](https://lmstudio.ai/). Load a model (e.g., Llama 3) and start the **Local Server** on port `1234`.
+4.  **First Launch**:
+    Execute `run.bat`. Alex will automatically download the **Vosk STT** model (~40MB) on the first run.
+5.  **Biometric Enrollment**:
+    *   Command: *"Hey Alex, enroll my face."*
+    *   Command: *"Hey Alex, enroll my voice."*
 
 ---
 
-## 📜 Disclaimer
-Alex AI has deep OS access. Use in a trusted environment.
+## 🧑‍💻 Developer Documentation
 
-**Developed by helpofai** | *Autonomous Human-PC Interaction.*
+### 🧱 Specialist API
+Developers can extend Alex by adding specialists to the `core/` directory and registering them in the `CEO-Brain`.
+
+#### **Action Schema (The Contract)**
+Every action passed to the UI must follow the `Action` object:
+```python
+Action(title="Task Name", desc="Human-readable intent", tool="SpecialistID", risk_score=50, steps=[])
+```
+
+### 🧬 Extending the Skill Graph
+Alex populates `data/skills_graph.json` through interaction. You can manually seed the graph to define "God-Mode" shortcuts:
+1.  Add entry to `corrections` mapping.
+2.  Key: `User Natural Language`.
+3.  Value: `EXECUTE: specialist_command`.
+
+### 🧪 Debugging & Logs
+*   **Cockpit Terminal**: Real-time logs appear in the bottom dashboard panel.
+*   **Episodic Log**: Review `data/episodes.json` to analyze Alex's decision-making history.
+*   **Simulation Mode**: Toggle `is_simulation = True` in `core/brain.py` to test plans without OS execution.
+
+---
+
+**Developed by helpofai** | *Pioneering Autonomous Local Intelligence.*
