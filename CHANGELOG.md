@@ -1,5 +1,14 @@
 # 📜 Changelog: Alex AI Agentic Core
 
+## [4.1.1] - 2025-12-23
+### 🧹 Bug Fixes & Stabilization
+- **Signal Restoration**: Fixed missing internal signal connections that prevented AI output from showing in the UI.
+- **Thread Safety**: Resolved `AttributeError` by restoring update notification and background checking methods.
+- **UI Logic**: Fixed circular imports and class definition issues in the main window cockpit.
+- **DPI V2 Final**: Resolved the 'Access Denied' conflict by pre-initializing Windows DPI awareness before library imports.
+
+---
+
 ## [4.1.0] - 2025-12-23
 ### 🚀 New Features
 - **Universal Semantic Awareness**: Every AI action is now validated against the real-time UI tree and OCR before execution.

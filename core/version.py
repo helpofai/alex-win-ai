@@ -1,6 +1,6 @@
 import requests
 
-CURRENT_VERSION = "4.1.0"
+CURRENT_VERSION = "4.1.1"
 REPO_URL = "https://api.github.com/repos/helpofai/alex-win-ai/releases/latest"
 
 def get_current_version():

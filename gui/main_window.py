@@ -79,6 +79,10 @@ class MainWindow(QMainWindow):
         self.signals = WorkerSignals()
         self.brain = Brain(self.voice, ui_signals=self.signals, task_callback=self.show_live_single)
         
+        self.signals.update_log.connect(self.append_chat)
+        self.signals.status_changed.connect(self.update_state)
+        self.signals.update_available.connect(self._notify_update)
+        
         self.dashboard = MasterDashboard()
         self.signals.log_tab.connect(self.dashboard.route_log)
         self.ripple = ClickRipple()
@@ -117,6 +121,17 @@ class MainWindow(QMainWindow):
         self.timer = QTimer(self); self.timer.timeout.connect(self._update_loop); self.timer.start(30)
         try: keyboard.add_hotkey('ctrl+shift+a', self._force_focus)
         except: pass
+
+        # Check for updates in background
+        threading.Thread(target=self._update_check_thread, daemon=True).start()
+
+    def _update_check_thread(self):
+        new_v = check_for_updates()
+        if new_v: self.signals.update_available.emit(new_v)
+
+    def _notify_update(self, version):
+        self.append_chat("SYSTEM", f"🚀 A new version (v{version}) is available on GitHub!")
+        self.popup_result.show_success(f"Update Available: v{version}")
 
     def switch_to_mini(self): self.hide(); self.mini_mode.show()
     def restore_from_mini(self): self.mini_mode.hide(); self.show()
