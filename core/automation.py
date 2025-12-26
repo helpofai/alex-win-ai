@@ -9,7 +9,7 @@ ASSETS_DIR = "assets"
 class Automation:
     def __init__(self):
         pyautogui.FAILSAFE = True 
-        pyautogui.PAUSE = 0.3
+        pyautogui.PAUSE = 0.2
 
     def capture_screen_base64(self):
         try:
@@ -25,18 +25,13 @@ class Automation:
             return f"data:image/jpeg;base64,{img_str}"
         except: return None
 
-    def click_icon(self, icon_name):
-        icon_path = os.path.join(ASSETS_DIR, f"{icon_name}.png")
-        if not os.path.exists(icon_path):
-            return f"Error: No image for '{icon_name}'."
-        try:
-            location = pyautogui.locateOnScreen(icon_path, confidence=0.8)
-            if location:
-                center = pyautogui.center(location)
-                pyautogui.click(center)
-                return f"Clicked {icon_name}."
-            return f"Could not see {icon_name}."
-        except Exception as e: return str(e)
+    def move_mouse(self, x, y):
+        pyautogui.moveTo(x, y, duration=0.3)
+        return f"Moved to {x}, {y}"
+
+    def move_relative(self, dx, dy):
+        pyautogui.moveRel(dx, dy, duration=0.3)
+        return f"Moved by {dx}, {dy}"
 
     def click_coordinates(self, x, y):
         pyautogui.click(x, y)
@@ -44,23 +39,27 @@ class Automation:
 
     def right_click(self):
         pyautogui.rightClick()
-        return "Right clicked."
+        return "Right clicked"
 
-    def drag_to(self, x, y):
-        pyautogui.dragTo(x, y, duration=1.0)
-        return f"Dragged to {x}, {y}"
+    def drag_and_drop(self, x1, y1, x2, y2):
+        pyautogui.moveTo(x1, y1)
+        pyautogui.dragTo(x2, y2, duration=1.0, button='left')
+        return f"Dragged from {x1},{y1} to {x2},{y2}"
 
     def type_text(self, text):
         pyautogui.write(text, interval=0.02)
-        return "Typed."
+        return "Typed"
 
     def press_key(self, key):
         pyautogui.press(key)
         return f"Pressed {key}"
 
     def hotkey(self, keys):
-        """Supports 'ctrl', 'c' or ['ctrl', 'alt', 'del']"""
         if isinstance(keys, str):
             keys = [k.strip() for k in keys.split("+")]
         pyautogui.hotkey(*keys)
-        return f"Executed hotkey: {'+'.join(keys)}"
+        return f"Hotkey {keys}"
+
+    def scroll(self, clicks):
+        pyautogui.scroll(clicks)
+        return f"Scrolled {clicks}"

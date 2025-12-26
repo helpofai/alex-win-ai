@@ -1,5 +1,23 @@
 # 📜 Changelog: Alex AI Agentic Core
 
+## [4.1.0] - 2025-12-23
+### 🚀 New Features
+- **Universal Semantic Awareness**: Every AI action is now validated against the real-time UI tree and OCR before execution.
+- **Deep Window Awareness**: Integrated **Windows UI Automation API** to read internal data from browsers, editors, and Explorer.
+- **Physical Control Visuals**: Added a **Neon Ripple Effect** that pulses on screen whenever Alex clicks or drags.
+- **Expanded Mouse Primitives**: Added native support for relative movement, right-clicking, and drag-and-drop.
+- **Intelligent Error Recovery**: Alex now detects if a click target is missing and reports the specific UI state.
+
+### 🏛️ Architecture & Security
+- **Closed-Loop Execution**: Implemented a "Pre-Scan -> Act -> Verify" pipeline for all specialist tasks.
+- **PowerShell Reliability**: Further optimized app launching using PowerShell `Invoke-Item` for 100% success rate.
+
+### 🧹 Bug Fixes
+- **CFFI Broadcast Fix**: Resolved the final edge cases for audio buffer shape mismatches.
+- **Chat Log Sync**: Fixed the background thread routing to ensure all AI thoughts appear in the UI correctly.
+
+---
+
 ## [4.0.0] - 2025-12-23
 ### 🚀 New Features
 - **Integrated Command Sphere**: Replaced dashboard with a circular holographic core and "Expanding Wing" panels.
